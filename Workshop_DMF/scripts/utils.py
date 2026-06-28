@@ -3,6 +3,13 @@ import subprocess
 from pathlib import Path, PurePosixPath
 from typing import List, Optional, Set, Tuple
 
+# Directory suffixes that identify a deployable Fabric item (pyfabricops format).
+# Used as fallback when .platform files are absent.
+FABRIC_ITEM_SUFFIXES = (
+    ".Notebook", ".Lakehouse", ".Report", ".SemanticModel",
+    ".DataPipeline", ".CopyJob", ".VariableLibrary", ".Environment",
+)
+
 
 def _run(cmd: List[str], check: bool = True) -> str:
     """Run a command and return stdout."""
@@ -75,7 +82,9 @@ def _find_platform_item(repo_rel_path: str, src_root: str) -> Optional[str]:
     src_path = Path(src_root)
 
     while True:
-        if (current / ".platform").exists():
+        if (current / ".platform").exists() or any(
+            current.name.endswith(s) for s in FABRIC_ITEM_SUFFIXES
+        ):
             return PurePosixPath(*current.parts).as_posix()
         if current == src_path or current.parent == current:
             break
