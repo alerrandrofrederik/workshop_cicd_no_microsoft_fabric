@@ -41,14 +41,6 @@
       }
     },
     {
-      "name": "connection",
-      "note": "",
-      "type": "ConnectionReference",
-      "value": {
-        "connectionId": "4bef2eb0-b5df-44f7-993d-f47d4b67b7d2"
-      }
-    },
-    {
       "name": "nb_load_bronze",
       "note": "",
       "type": "ItemReference",
