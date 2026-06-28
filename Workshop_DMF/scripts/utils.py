@@ -57,7 +57,7 @@ def get_changed_files(base_ref: str, head_ref: str) -> List[str]:
         _ensure_remote_ref(head_ref)
 
     try:
-        out = _run(["git", "diff", "--name-only", base_ref, head_ref])
+        out = _run(["git", "diff", "--name-only", "--relative", base_ref, head_ref])
     except subprocess.CalledProcessError:
         return []
     if not out:
