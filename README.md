@@ -2,450 +2,377 @@
 
 > Workshop prático conduzido por **Sidney** e **Alison** — comunidade Power BI / Fabric
 
-> ℹ️ **Migração:** o CI/CD deste projeto roda em **GitHub Actions** (workflows em
-> [`.github/workflows/`](.github/workflows)). A versão original em **Azure DevOps**
-> foi preservada apenas como referência didática na pasta
-> [`projeto_com_azure_devops/`](projeto_com_azure_devops). O conteúdo conceitual
-> abaixo continua válido para qualquer plataforma de CI/CD.
+Este repositório mostra, **passo a passo**, como fazer o "robô do GitHub" publicar
+sozinho os seus relatórios, notebooks e modelos do **Microsoft Fabric** — sem você
+precisar clicar em nada manualmente.
 
-## CI/CD com GitHub Actions
-
-Os pipelines ativos estão em `.github/workflows/`:
-
-- **`test.yml`** — roda em todo **Pull Request** para `main` que altere
-  `Workshop_DMF/src/**`; executa `pytest` (via `uv`) em `ubuntu-latest`.
-- **`deploy.yml`** — roda em **push** para `main`/`develop` (e manualmente via
-  *Run workflow*) e faz o deploy seletivo dos artefatos Fabric com `pyfabricops`.
-  Usa **GitHub Environments** (`develop` e `main`), com **gate de aprovação** no
-  `main` (produção).
-
-### Configuração necessária no GitHub
-
-1. **Environments** (Settings → Environments): criar `develop` e `main`. No `main`,
-   ativar *Required reviewers* para o gate de aprovação de produção.
-2. **Secrets** (por Environment, ou no repositório se o Service Principal for o mesmo):
-   - `FAB_TENANT_ID`
-   - `FAB_CLIENT_ID`
-   - `FAB_CLIENT_SECRET`
-3. (Opcional) **Branch protection** em `main` exigindo o check de testes antes do merge.
+> 📦 A versão antiga deste projeto (que rodava no **Azure DevOps**) ficou guardada na
+> pasta [`projeto_com_azure_devops/`](projeto_com_azure_devops) só como recordação. Tudo
+> hoje roda no **GitHub Actions**.
 
 ---
 
-## 📋 Índice
+## 🧒 Explicando como para uma criança de 10 anos
 
-- [Visão Geral](#visão-geral)
-- [Pré-requisitos](#pré-requisitos)
-- [Conceitos Fundamentais](#conceitos-fundamentais)
-- [Arquitetura](#arquitetura)
-- [Configuração do Ambiente](#configuração-do-ambiente)
-- [Fluxo de Trabalho Git](#fluxo-de-trabalho-git)
-- [Pipelines CI/CD](#pipelines-cicd)
-- [Boas Práticas](#boas-práticas)
-- [Troubleshooting](#troubleshooting)
-- [Recursos e Referências](#recursos-e-referências)
+Imagine que você tem dois quartos de brinquedos:
 
----
+- 🧸 **DEV** = o quarto de **brincar e bagunçar** (workspace `Workshop_DMF-DEV`)
+- 🏆 **PRD** = a **vitrine arrumada** que as visitas veem (workspace `Workshop_DMF-PRD`)
 
-## Visão Geral
+Você **brinca e testa** no quarto de bagunça. Quando o brinquedo fica pronto e bonito,
+um **robô** (o GitHub Actions) pega ele e coloca na vitrine — **mas só depois que um
+adulto disser "pode pôr na vitrine!"** (a aprovação de produção).
 
-Este repositório reúne os conceitos, templates e práticas abordados no workshop sobre **CI/CD no Microsoft Fabric**, com foco em:
+O robô precisa de 3 coisas para trabalhar:
 
-- Automação de deployments entre ambientes (Dev → QA → Prod)
-- Versionamento de artefatos do Fabric via Git
-- Integração com **Azure DevOps** e a biblioteca **PyFabricOps**
-- Gestão segura de credenciais com **Azure Key Vault**
-
-O objetivo central é ensinar os fundamentos de DevOps aplicados ao ecossistema Microsoft Fabric, de forma que as práticas possam ser adaptadas a qualquer empresa, independentemente das ferramentas específicas utilizadas.
-
----
-
-## Pré-requisitos
-
-| Requisito | Observação |
+| O que o robô precisa | No projeto chamamos de |
 |---|---|
-| Subscrição Azure ativa | Trial (60 dias) ou licença permanente |
-| Conta Azure DevOps | Organização e projeto criados |
-| Microsoft Fabric (capacidade F ou Trial) | Recomendado F64+ para produção |
-| Conhecimento básico de Git | Clone, commit, branch, merge |
-| Python (opcional) | Necessário apenas para uso local da PyFabricOps |
-| VS Code (opcional) | Recomendado para trabalho local |
+| 🔑 Uma **chave** para entrar nos quartos | Service Principal + Secrets |
+| 📒 Um **caderninho** dizendo qual quarto é qual | `variables.json` e `valueSets/` |
+| 🏷️ Uma **etiqueta** em cada brinquedo dizendo o que ele é | arquivos `.platform` |
+
+Se qualquer uma das 3 estiver errada, o robô trava. Foi exatamente isso que aconteceu
+com a gente — e está tudo explicado lá embaixo em **[Problemas que encontramos](#-problemas-que-encontramos-e-como-resolver)**.
 
 ---
 
-## Conceitos Fundamentais
+## 🗺️ Como as peças se encaixam
 
-### DevOps
-> Conjunto de **pessoas**, **processos** e **produtos** que habilitam a entrega contínua de valor.
+```mermaid
+flowchart LR
+    Dev["👩‍💻 Você<br/>(no seu PC)"] -->|git push| GH["🐙 GitHub<br/>(guarda o código)"]
+    GH -->|dispara| GA["🤖 GitHub Actions<br/>(o robô)"]
+    GA -->|usa a chave 🔑| SPN["🔐 Service Principal"]
+    GA -->|roda| PY["🐍 deploy.py<br/>(pyfabricops)"]
+    PY -->|publica| DEV["🧸 Workspace DEV"]
+    PY -->|publica<br/>após aprovação ✋| PRD["🏆 Workspace PRD"]
 
-### CI/CD
-- **CI (Integração Contínua):** Prática de integrar código frequentemente, com validações automáticas a cada merge.
-- **CD (Entrega Contínua):** Automatização do processo de deploy entre ambientes.
-
-### Git vs GitHub/Azure DevOps
-| | Git | GitHub / Azure DevOps / GitLab |
-|---|---|---|
-| O que é | Sistema de versionamento local | Plataforma de colaboração na nuvem |
-| Roda onde | Na máquina do desenvolvedor | Na web |
-| Alternativa self-hosted | — | GitLab (ideal para redes privadas) |
+    subgraph Fabric["☁️ Microsoft Fabric"]
+        DEV
+        PRD
+    end
+```
 
 ---
 
-## Arquitetura
+## 📋 Pré-requisitos (o que você precisa antes de começar)
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    Azure DevOps                         │
-│  ┌──────────┐   ┌──────────┐   ┌─────────────────────┐ │
-│  │  Boards  │   │   Repos  │   │  Pipelines (YAML)   │ │
-│  └──────────┘   └────┬─────┘   └──────────┬──────────┘ │
-└───────────────────────┼───────────────────┼─────────────┘
-                        │                   │
-              ┌─────────▼─────────┐         │
-              │   Microsoft Fabric│         │ trigger (merge)
-              │                   │         │
-              │  [Dev Workspace]  │◄────────┘
-              │  [QA  Workspace]  │  PyFabricOps 
-              │  [Prod Workspace] │
-              └─────────┬─────────┘
-                        │
-              ┌─────────▼─────────┐
-              │   Azure Key Vault  │
-              │  (secrets/creds)   │
-              └────────────────────┘
-```
-
-### Camadas de dados (Lakehouse)
-
-```
-Ingestão → [Bronze] → [Silver] → [Gold] → Modelo Semântico → Power BI
-```
-
-| Camada | Descrição |
+| Você precisa de... | Para quê? |
 |---|---|
-| **Bronze** | Dados brutos, sem transformação |
-| **Silver** | Dados limpos e padronizados |
-| **Gold** | Dados prontos para consumo analítico |
+| Conta no **GitHub** | Guardar o código e rodar o robô |
+| **Microsoft Fabric** com 2 workspaces (DEV e PRD) | Os "quartos" onde os itens são publicados |
+| Um **Service Principal** (App Registration no Entra ID) | A "chave robô" que publica sem ser uma pessoa |
+| **Git** instalado no PC | Para clonar e enviar mudanças |
+| **Python 3.13+** e **uv** (opcional, só para rodar local) | Testar antes de enviar |
 
 ---
 
-## Configuração do Ambiente
+## 🚀 Passo a passo: do clone ao primeiro deploy
 
-### 1. Registro de Aplicação (Service Principal)
+> Siga na ordem. Cada passo resolve um dos problemas que a gente encontrou de verdade.
 
-No portal Azure (`portal.azure.com`):
-
-1. Acesse **Azure Active Directory → App Registrations → New Registration**
-2. Anote: `Application (Client) ID`, `Object ID`, `Directory (Tenant) ID`
-3. Em **Certificates & Secrets**, crie um novo secret (validade máx. 24 meses)
-4. Adicione o Service Principal como membro do Workspace no Fabric com permissão de **Contributor**
-
-> ⚠️ **Atenção:** Implemente rotação automática de secrets. Não gerencie manualmente.
-
-### 2. Azure Key Vault
+### 1️⃣ Clonar o projeto
 
 ```bash
-# Custo aproximado: ~R$ 1,00/mês por vault
-# Recomendação de região: mesma região do Fabric (Brasil Sul) para produção
+git clone https://github.com/<sua-conta>/<seu-repo>.git
+cd <seu-repo>
 ```
 
-Permissões necessárias no Key Vault:
+> 📁 Repare que o projeto Fabric fica dentro da pasta `Workshop_DMF/`. A pasta `.github/`
+> (com o robô) fica na **raiz**, um nível acima. Isso é importante!
 
-| Role | Permissão |
+### 2️⃣ Criar o Service Principal (a "chave robô")
+
+No portal do **Azure / Entra ID**:
+
+1. **App registrations → New registration** → dê um nome (ex: `sp-fabric-cicd`)
+2. Anote 3 valores:
+   - **Directory (tenant) ID** → vira o secret `FAB_TENANT_ID`
+   - **Application (client) ID** → vira o secret `FAB_CLIENT_ID`
+   - Em **Certificates & secrets → New client secret** → vira `FAB_CLIENT_SECRET`
+
+> ⚠️ O secret só aparece **uma vez**. Copie na hora!
+
+### 3️⃣ Dar acesso do robô aos workspaces
+
+Esse passo foi onde tomamos o primeiro erro (`403 InsufficientPrivileges`).
+
+Em **cada workspace** (DEV e PRD) no Fabric:
+
+1. Abra **Manage access** (Gerenciar acesso)
+2. **Add people or groups** → procure pelo nome do Service Principal
+3. Dê a função **Admin** (ou no mínimo **Contributor**)
+
+> 🤖 Sem isso, o robô tem a chave mas a porta continua trancada.
+
+### 4️⃣ Configurar os Secrets no GitHub
+
+No GitHub: **Settings → Secrets and variables → Actions** (ou dentro de cada Environment).
+
+Crie os 3 secrets — **só os nomes, os valores ficam escondidos**:
+
+```
+FAB_TENANT_ID
+FAB_CLIENT_ID
+FAB_CLIENT_SECRET
+```
+
+> 🔒 **Nunca** escreva esses valores dentro de arquivos do projeto! Use sempre Secrets.
+> O arquivo `.env` local existe só para testes na sua máquina e está no `.gitignore`.
+
+### 5️⃣ Criar os Environments (develop e main)
+
+No GitHub: **Settings → Environments**.
+
+1. Crie um Environment chamado **`develop`** (o quarto de brincar — sem trava)
+2. Crie um Environment chamado **`main`** (a vitrine — **com trava**):
+   - Marque **Required reviewers** e adicione você mesmo
+   - Isso cria o **portão de aprovação** antes do deploy em produção
+
+> ✋ É esse "Required reviewers" que faz o robô **parar e esperar** sua autorização
+> antes de mexer na produção.
+
+### 6️⃣ Conferir os IDs dos workspaces (o "caderninho")
+
+Esse foi o nosso segundo erro: os IDs estavam desatualizados e o robô tentava entrar
+no quarto errado.
+
+Abra estes arquivos e confira se os IDs são os **reais** dos seus workspaces:
+
+| Arquivo | Para qual ambiente |
 |---|---|
-| `Key Vault Secrets User` | Leitura de secrets (para pipelines) |
-| `Key Vault Secrets Officer` | Criação/alteração de secrets (para admins) |
+| `Workshop_DMF/src/CICD/EnvironmentVariables.VariableLibrary/variables.json` | DEV (padrão) |
+| `Workshop_DMF/src/CICD/EnvironmentVariables.VariableLibrary/valueSets/main.json` | PRD (sobrescreve quando a branch é `main`) |
 
-### 3. Integração Git no Fabric Workspace
+O `workspace_id` precisa bater com o ID real. Como descobrir o ID? Está na URL do
+workspace no Fabric, ou rode o teste de conexão do passo 8.
 
-1. No Workspace → **Workspace Settings → Git Integration**
-2. Conecte ao repositório Azure DevOps
-3. Selecione a branch correspondente ao ambiente (`dev`, `main`)
+> 💡 Dica: o ID do workspace aparece **várias vezes** no arquivo (no `workspace_id` e
+> dentro de cada lakehouse/notebook). Troque **todas** as ocorrências.
 
-> ⚠️ **Regra crítica:** Ambientes de **produção** nunca devem estar conectados à branch `dev`.
+### 7️⃣ Garantir os arquivos `.platform` (a "etiqueta")
 
-### 4. Variáveis de Ambiente (Library Variables)
+Esse foi o terceiro erro: o `pyfabricops` precisa de um arquivo `.platform` dentro de
+**cada** item, dizendo o **tipo** (Notebook, Lakehouse, Report...) e o **nome**.
 
-Configure no Azure DevOps em **Pipelines → Library**:
-
-```yaml
-# Exemplo de variáveis por ambiente
-LAKEHOUSE_ID: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-DATABASE_CONNECTION: "Server=...;Database=..."
-WORKSPACE_ID: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-```
-
-> ⚠️ **Nunca armazene** senhas ou client secrets nas variáveis do Fabric. Use o Key Vault.
-
----
-
-## Fluxo de Trabalho Git
-
-### Estrutura de Branches
-
-```
-main (produção)
-│
-├── dev (desenvolvimento integrado)
-│   ├── feature/ingestao-vendas
-│   ├── feature/modelo-financeiro
-│   └── feature/pipeline-qualidade
-│
-└── hotfix/correcao-critica (direto para main, quando necessário)
-```
-
-### Comandos Essenciais
+Verifique se cada pasta de item tem um `.platform`:
 
 ```bash
-# Clonar repositório
-git clone <url-do-repositorio>
+find Workshop_DMF/src -name ".platform"
+```
 
-# Criar e trocar para nova branch de feature
-git checkout -b feature/nome-da-feature
+Se algum estiver faltando, crie no formato:
 
-# Verificar status das mudanças
-git status
+```json
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/platform/0.0.1/schema.json",
+  "metadata": {
+    "type": "Notebook",
+    "displayName": "load_bronze"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "<um-uuid-qualquer>"
+  }
+}
+```
 
-# Adicionar arquivos ao stage
+> 🏷️ Sem a etiqueta, o robô vê o brinquedo mas não sabe o que é — e desiste.
+
+### 8️⃣ Primeiro deploy 🎉
+
+Teste a chave **localmente antes** (opcional, mas recomendado):
+
+```bash
+cd Workshop_DMF
+python -c "import pyfabricops as pf; pf.set_auth_provider('env'); print(pf.get_workspace('<SEU_WORKSPACE_ID_DEV>', df=False))"
+```
+
+Se aparecer o nome do workspace, a chave funciona! Agora é só enviar para o GitHub:
+
+```bash
 git add .
-
-# Commitar com Conventional Commits
-git commit -m "feat: adiciona pipeline de ingestão de vendas"
-git commit -m "fix: corrige ID do lakehouse no workspace dev"
-git commit -m "docs: atualiza readme com instruções de deploy"
-
-# Enviar branch para o repositório remoto
-git push origin feature/nome-da-feature
-
-# Atualizar branch local com mudanças remotas
-git pull origin dev
-
-# Merge de feature para dev (via Pull Request — não faça direto!)
-git checkout dev
-git merge feature/nome-da-feature
+git commit -m "feat: configura CI/CD"
+git push origin develop
 ```
 
-### Conventional Commits
+O robô acorda sozinho e publica no DEV. Veja em **Actions** no GitHub.
 
-| Prefixo | Uso |
-|---|---|
-| `feat:` | Nova funcionalidade |
-| `fix:` | Correção de bug |
-| `docs:` | Documentação |
-| `refactor:` | Refatoração sem mudança de comportamento |
-| `test:` | Adição ou correção de testes |
-| `chore:` | Tarefas de manutenção (ex: atualizar dependências) |
+---
 
-### Recuperação de Dados
+## 🔄 O fluxo do dia a dia (Git + PR + aprovação)
+
+### Como as branches conversam
+
+```mermaid
+flowchart TD
+    F["🌿 feature/minha-mudanca"] -->|Pull Request| D["🧸 develop<br/>(quarto de brincar)"]
+    D -->|push| DEV_DEPLOY["🤖 deploy automático no DEV"]
+    D -->|Pull Request| M["🏆 main<br/>(vitrine)"]
+    M -->|merge + aprovação ✋| PRD_DEPLOY["🤖 deploy no PRD"]
+```
+
+### O caminho completo até a produção (com o portão de aprovação)
+
+```mermaid
+sequenceDiagram
+    actor Você
+    participant GH as 🐙 GitHub
+    participant Test as 🧪 test.yml
+    participant Gate as ✋ Portão (Environment main)
+    participant Deploy as 🤖 deploy.yml
+    participant PRD as 🏆 Workspace PRD
+
+    Você->>GH: Abre PR develop → main
+    GH->>Test: Dispara os testes (pytest)
+    Test-->>GH: ✅ 9 testes passaram
+    Você->>GH: Faz o merge do PR
+    GH->>Gate: Deploy quer entrar na produção
+    Gate-->>Você: "Aguardando sua aprovação..."
+    Você->>Gate: Clica em Approve ✅
+    Gate->>Deploy: Liberado!
+    Deploy->>PRD: Publica os 19 itens 🎉
+```
+
+### Resumo bem curtinho
+
+```
+feature ──PR──► develop ──(deploy automático no DEV)
+                   │
+                   └──PR──► main
+                              │
+                        🧪 test.yml (pytest) ✓
+                              │
+                        ✋ portão espera você aprovar
+                              │
+                        ✅ você aprova ──► 🤖 deploy no PRD
+```
+
+> A **única** coisa manual em produção é clicar em **Approve**. Todo o resto é automático.
+
+---
+
+## 🧪 Como testar
+
+Os testes são "provas estáticas" — leem os arquivos sem se conectar ao Fabric. Rápido e seguro.
 
 ```bash
-# Desfazer último commit (mantendo as mudanças locais)
-git reset --soft HEAD~1
-
-# Reverter um commit específico (seguro para branches compartilhadas)
-git revert <hash-do-commit>
-
-# Ver histórico de commits
-git log --oneline
-
-# Trazer mudanças de uma branch para outra (cherry-pick)
-git cherry-pick <hash-do-commit>
+cd Workshop_DMF
+uv sync --group dev --no-install-project
+uv run pytest tests/ -v
 ```
+
+O que eles checam:
+- **Relatório**: tem `report.json`, todo visual tem `$schema` e `visualType`, e as medidas
+  usadas existem no modelo
+- **Modelo semântico**: toda medida tem descrição `///`, `displayFolder` e `lineageTag`;
+  tabelas com acento (Logística, Calendário) estão entre aspas
+
+No GitHub, esses testes rodam **sozinhos** em todo PR para a `main` (workflow `test.yml`).
 
 ---
 
-## Pipelines CI/CD
+## 🐞 Problemas que encontramos (e como resolver)
 
-### Estrutura do arquivo YAML
+Esta é a parte mais valiosa para **replicar em outros projetos**. Foram os 4 obstáculos reais:
 
-```yaml
-trigger:
-  branches:
-    include:
-      - main   # Deploy para produção apenas no merge para main
+### ❌ Erro 1: `403 InsufficientPrivileges`
+**Sintoma:** o deploy autentica mas leva 403 ao acessar o workspace.
+**Causa:** o Service Principal não era membro do workspace.
+**Solução:** adicionar o SP como **Admin/Contributor** em cada workspace (Passo 3).
 
-pool:
-  vmImage: 'ubuntu-latest'
+### ❌ Erro 2: `403` mesmo com o SP no workspace / workspace errado
+**Sintoma:** 403 ou `AttributeError: 'NoneType' object has no attribute 'get'`.
+**Causa:** o `workspace_id` no `variables.json` / `main.json` estava **desatualizado**.
+**Solução:** trocar **todas** as ocorrências do ID pelo ID real do workspace (Passo 6).
 
-variables:
-  - group: fabric-prod-variables   # Library criada no Azure DevOps
-
-stages:
-  - stage: Validate
-    jobs:
-      - job: RunTests
-        steps:
-          - script: |
-              pip install pyfabricops
-              python run_tests.py
-            displayName: 'Executar testes de qualidade'
-
-  - stage: Deploy
-    dependsOn: Validate
-    condition: succeeded()
-    jobs:
-      - job: DeployToProduction
-        steps:
-          - script: |
-              python deploy.py --env prod
-            displayName: 'Deploy para Produção'
-```
-
-### Quando usar cada abordagem de deploy
-
-| Método | Quando usar | Limitações |
-|---|---|---|
-| **Deployment Pipeline (Fabric)** | Projetos simples, hot fixes manuais | Não troca parâmetros de Direct Lake no deploy; não versiona Dataflow G1 |
-| **Azure Pipeline (YAML)** | Automação completa, troca de variáveis entre ambientes | Requer configuração mais elaborada |
-| **PyFabricOps / Yemo** | Deploy seletivo, modelos semânticos, automação via API | Curva de aprendizado inicial |
-
-### Dataflow: atenção!
-
-- **Dataflow G1:** Não é versionável no Git. Será descontinuado. Migre para G2.
-- **Dataflow G2:** Versionável, melhor performance, menor consumo de capacidade.
-
----
-
-## Boas Práticas
-
-### Organização de Workspaces
-
-```
-✅ Um Workspace por equipe/repositório
-✅ Workspaces de Dev descentralizados por área de negócio
-✅ Workspace de Produção centralizado e gerenciado pela TI
-✅ Apagar Workspaces temporários de feature após o merge
-
-❌ Nunca conectar Prod diretamente à branch dev
-❌ Nunca usar funcionalidades em Preview em produção
-```
-
-### Segurança
-
-```
-✅ Princípio do menor privilégio para todas as permissões
-✅ Service Principal ao invés de usuários pessoais para automação
-✅ Secrets gerenciados via Key Vault, com rotação automática
-✅ Arquivos sensíveis listados no .gitignore
-
-❌ Nunca armazenar senhas ou client secrets em variáveis do Fabric
-❌ Nunca comitar arquivos .env ou cache do Power BI
-```
-
-### .gitignore recomendado para projetos Fabric/Power BI
-
-```gitignore
-# Variáveis de ambiente locais
-.env
-*.env
-
-# Cache do Power BI Desktop
-*.pbix
-**/.pbi/
-
-# Arquivos de sistema
-.DS_Store
-Thumbs.db
-
-# Pastas de dependências locais
-__pycache__/
-*.pyc
-.venv/
-```
-
-### IDs de Artefatos
-
-> Sempre use **IDs** para referenciar artefatos (Lakehouse, Notebooks, etc.), **nunca nomes**.  
-> Nomes podem mudar entre ambientes; IDs são únicos e estáveis.
+### ❌ Erro 3: `No items to deploy` (mesmo tendo mudado arquivos)
+**Sintoma:** o deploy roda mas não acha nada para publicar.
+**Causa:** o workflow roda em `working-directory: Workshop_DMF`, mas `git diff` devolvia
+caminhos a partir da raiz do repo (`Workshop_DMF/src/...`), e o script esperava `src/...`.
+**Solução:** adicionamos a flag `--relative` no `git diff` dentro de `scripts/utils.py`.
 
 ```python
-# ✅ Correto
-lakehouse_id = os.getenv("LAKEHOUSE_ID")
-
-# ❌ Evitar
-lakehouse_name = "lakehouse_producao"
+# scripts/utils.py
+out = _run(["git", "diff", "--name-only", "--relative", base_ref, head_ref])
 ```
 
-### Pull Requests
+### ❌ Erro 4: `FileNotFoundError: ...\.platform`
+**Sintoma:** o item é detectado, mas o deploy quebra ao tentar ler o `.platform`.
+**Causa:** o repositório não tinha os arquivos `.platform` (formato exigido pelo pyfabricops).
+**Solução:** criamos um `.platform` para **cada** item com `type` e `displayName` corretos (Passo 7).
 
-- Toda mudança para `dev` ou `main` deve passar por **Pull Request**
-- Defina ao menos um aprovador para merges em `main`
-- Prefira **Squash Merge** para manter o histórico limpo
-- Valide testes automatizados antes de aprovar
-
----
-
-## Troubleshooting
-
-### Artefato não está sendo comitado no Fabric
-
-**Causa provável:** O Service Principal não tem acesso à conexão de dados usada pelo artefato.
-
-**Solução:**
-1. Verifique se o Service Principal tem permissão na fonte de dados
-2. Confirme se todas as conexões do artefato estão configuradas
-3. Verifique as permissões no Key Vault (`Secret User` no mínimo)
+> 🧠 **Lição geral:** chave (3) → caderninho (6) → etiqueta (7). Resolva nessa ordem.
 
 ---
 
-### IDs incorretos após deploy
+## 📁 Estrutura do projeto
 
-**Causa:** IDs de Lakehouse e artefatos mudam entre workspaces.
-
-**Solução:**
-1. Após o primeiro deploy, atualize manualmente os IDs nas variáveis de biblioteca
-2. No próximo deploy, o pipeline usará os IDs corretos automaticamente
-
----
-
-### Notebook deletado sem commit
-
-**Solução:**
-1. Abra um chamado na Microsoft (possibilidade de recuperação via portal admin)
-2. Se havia commit anterior: `git revert` ou `git reset` para restaurar o estado
-3. **Prevenção:** Sincronize sempre antes de deletar qualquer artefato
-
----
-
-### Pipeline não executa automaticamente ao abrir PR
-
-**Solução:** Verifique o trigger no YAML:
-
-```yaml
-pr:
-  branches:
-    include:
-      - dev
-      - main
+```
+.
+├── .github/workflows/
+│   ├── deploy.yml          # 🤖 publica no Fabric (push em develop/main + manual)
+│   └── test.yml            # 🧪 roda pytest em PR para main
+├── projeto_com_azure_devops/   # 📦 versão antiga (Azure DevOps) — só referência
+└── Workshop_DMF/
+    ├── scripts/
+    │   ├── deploy.py        # orquestra o deploy (detecta itens, troca IDs, publica)
+    │   └── utils.py         # detecção de itens alterados via git diff
+    ├── src/                 # 🧱 os artefatos do Fabric
+    │   ├── CICD/EnvironmentVariables.VariableLibrary/   # o "caderninho" de IDs
+    │   ├── Lakehouses/      # bronze / silver / gold
+    │   ├── Notebooks/       # notebooks de ETL
+    │   ├── Pipelines/       # data pipelines
+    │   ├── Reports/         # relatórios Power BI
+    │   └── Semantic Models/ # modelos semânticos (TMDL)
+    └── tests/               # provas estáticas (pytest)
 ```
 
 ---
 
-## Recursos e Referências
+## ⚙️ Como o `deploy.yml` funciona (modos de deploy)
 
-- 📚 [Documentação oficial Microsoft Fabric](https://learn.microsoft.com/fabric)
-- 📚 [Azure DevOps Pipelines](https://learn.microsoft.com/azure/devops/pipelines)
-- 📚 [Azure Key Vault](https://learn.microsoft.com/azure/key-vault)
-- 🐍 [PyFabricOps (Yemo)](https://github.com) — biblioteca open source desenvolvida por Alison
-- 📖 Livro recomendado: **Datamesh** — arquitetura de dados descentralizada
-- 🎓 Plataforma do workshop: **Dominando Microsoft Fabric**
+O workflow pode ser disparado **automaticamente** (push) ou **manualmente**
+(Actions → Deploy → Run workflow), com 3 modos:
 
----
-
-## Convenções de Nomenclatura
-
-| Artefato | Padrão | Exemplo |
+| Modo | O que faz | Quando usar |
 |---|---|---|
-| Repositório | `minusculas_com_underscore` | `engenharia_dados_vendas` |
-| Branch de feature | `feature/descricao-curta` | `feature/pipeline-nfe` |
-| Branch de hotfix | `hotfix/descricao-curta` | `hotfix/correcao-lakehouse-id` |
-| Workspace Dev | `[Equipe] - Dev` | `Engenharia - Dev` |
-| Workspace Prod | `[Equipe] - Prod` | `Engenharia - Prod` |
+| `selective` (padrão) | Publica só o que **mudou** (via `git diff`) | Dia a dia |
+| `specific` | Publica uma **lista** que você digita | Republicar um item específico |
+| `full` | Publica **todos** os itens de `src/` | Primeira carga / recuperação |
+
+> O ambiente (`develop` ou `main`) é escolhido automaticamente pela branch, e os IDs
+> de produção vêm do `valueSets/main.json`.
+
+---
+
+## 🛡️ Boas práticas (resumo)
+
+```
+✅ Service Principal (não usuário pessoal) para automação
+✅ Secrets no GitHub / Key Vault — nunca dentro de arquivos
+✅ Sempre usar IDs (não nomes) para referenciar artefatos
+✅ Produção sempre atrás de um portão de aprovação
+✅ Todo merge para develop/main passa por Pull Request
+
+❌ Nunca conectar produção à branch de desenvolvimento
+❌ Nunca commitar .env ou client secrets
+```
+
+---
+
+## 📚 Referências
+
+- 📖 [Documentação Microsoft Fabric](https://learn.microsoft.com/fabric)
+- 🐍 [PyFabricOps](https://pypi.org/project/pyfabricops/) — biblioteca usada no deploy
+- 🤖 [GitHub Actions](https://docs.github.com/actions)
+- 🔐 [GitHub Environments e aprovações](https://docs.github.com/actions/deployment/targeting-different-environments/using-environments-for-deployment)
 
 ---
 
 <div align="center">
 
-**Workshop CI/CD no Microsoft Fabric**  
+**Workshop CI/CD no Microsoft Fabric**
 Conduzido por Sidney e Alison — Comunidade Power BI Brasil
 
 </div>
