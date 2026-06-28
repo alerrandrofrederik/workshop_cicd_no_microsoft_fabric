@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/platform/0.0.1/schema.json",
+  "metadata": {
+    "type": "Environment",
+    "displayName": "NEE"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "993fac1b-49ef-4452-ab8e-876d67f0d7f0"
+  }
+}

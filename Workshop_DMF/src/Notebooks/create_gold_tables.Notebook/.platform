@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/platform/0.0.1/schema.json",
+  "metadata": {
+    "type": "Notebook",
+    "displayName": "create_gold_tables"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "163ed6bf-3ccd-4fce-9772-6334d8a05974"
+  }
+}

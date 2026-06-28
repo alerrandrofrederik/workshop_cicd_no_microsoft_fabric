@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/platform/0.0.1/schema.json",
+  "metadata": {
+    "type": "Notebook",
+    "displayName": "clean_data"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "8b12eff7-63ab-4959-bad7-5793b3fb8e2e"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/platform/0.0.1/schema.json",
+  "metadata": {
+    "type": "DataPipeline",
+    "displayName": "AdventureWorks"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "de797a95-ae07-4fb9-803b-76492ed422fb"
+  }
+}
