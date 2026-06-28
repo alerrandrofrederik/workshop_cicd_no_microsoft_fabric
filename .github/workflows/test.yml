@@ -1,0 +1,33 @@
+name: PBIP Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'Workshop_DMF/src/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Workshop_DMF
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.14
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install dev dependencies
+        run: uv sync --group dev --no-install-project
+
+      - name: Run PBIP tests
+        run: uv run pytest tests/ -v

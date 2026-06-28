@@ -22,7 +22,7 @@ mode = os.getenv("DEPLOY_MODE") or "selective" # "selective", "specific", "full"
 
 specific_items = os.getenv("ITEMS_TO_DEPLOY", "") # Comma-separated list of specific items to deploy when DEPLOY_MODE is "specific" 
 
-branch = os.getenv("GITHUB_REF_NAME") or pf.get_current_branch()
+branch = os.getenv("BUILD_SOURCEBRANCHNAME") or pf.get_current_branch()
 
 
 # Variables 

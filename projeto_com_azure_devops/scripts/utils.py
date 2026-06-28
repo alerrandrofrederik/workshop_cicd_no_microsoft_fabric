@@ -114,12 +114,8 @@ def resolve_head_and_prev() -> Tuple[str, str]:
     Default strategy: compare current commit (HEAD) to previous commit (HEAD~1).
     In Azure DevOps pipelines this usually works for 'post-merge' builds too.
     """
-    pr_target = os.getenv("GITHUB_BASE_REF")
+    pr_target = os.getenv("SYSTEM_PULLREQUEST_TARGETBRANCH")
     if pr_target:
-        # GITHUB_BASE_REF is the bare target branch name (e.g. "main"),
-        # so prefix it as a remote ref before normalizing.
-        if not pr_target.startswith(("refs/heads/", "origin/")):
-            pr_target = f"refs/heads/{pr_target}"
         target_ref = _normalize_ref(pr_target)
         return target_ref, "HEAD"
 
