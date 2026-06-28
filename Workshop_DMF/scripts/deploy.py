@@ -3,7 +3,7 @@ import glob
 import re
 import pyfabricops as pf
 
-from utils import list_changed_src_items
+from utils import list_changed_src_items, FABRIC_ITEM_SUFFIXES
 
 from dotenv import load_dotenv
 
@@ -70,7 +70,14 @@ else:
 
 if mode.lower() == "full":
     platform_files = glob.glob("src/**/.platform", recursive=True)
-    items = sorted({os.path.dirname(path) for path in platform_files})
+    if platform_files:
+        items = sorted({os.path.dirname(path) for path in platform_files})
+    else:
+        items = sorted(
+            p.as_posix()
+            for p in Path("src").rglob("*")
+            if p.is_dir() and any(p.name.endswith(s) for s in FABRIC_ITEM_SUFFIXES)
+        )
 elif mode.lower() == "specific":
     items = [item.strip() for item in specific_items.split(",") if item.strip()]
 else:
