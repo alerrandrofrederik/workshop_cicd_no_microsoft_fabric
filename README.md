@@ -1,6 +1,33 @@
-# 🚀 CI/CD no Microsoft Fabric com Azure DevOps
+# 🚀 CI/CD no Microsoft Fabric com GitHub Actions
 
 > Workshop prático conduzido por **Sidney** e **Alison** — comunidade Power BI / Fabric
+
+> ℹ️ **Migração:** o CI/CD deste projeto roda em **GitHub Actions** (workflows em
+> [`.github/workflows/`](.github/workflows)). A versão original em **Azure DevOps**
+> foi preservada apenas como referência didática na pasta
+> [`projeto_com_azure_devops/`](projeto_com_azure_devops). O conteúdo conceitual
+> abaixo continua válido para qualquer plataforma de CI/CD.
+
+## CI/CD com GitHub Actions
+
+Os pipelines ativos estão em `.github/workflows/`:
+
+- **`test.yml`** — roda em todo **Pull Request** para `main` que altere
+  `Workshop_DMF/src/**`; executa `pytest` (via `uv`) em `ubuntu-latest`.
+- **`deploy.yml`** — roda em **push** para `main`/`develop` (e manualmente via
+  *Run workflow*) e faz o deploy seletivo dos artefatos Fabric com `pyfabricops`.
+  Usa **GitHub Environments** (`develop` e `main`), com **gate de aprovação** no
+  `main` (produção).
+
+### Configuração necessária no GitHub
+
+1. **Environments** (Settings → Environments): criar `develop` e `main`. No `main`,
+   ativar *Required reviewers* para o gate de aprovação de produção.
+2. **Secrets** (por Environment, ou no repositório se o Service Principal for o mesmo):
+   - `FAB_TENANT_ID`
+   - `FAB_CLIENT_ID`
+   - `FAB_CLIENT_SECRET`
+3. (Opcional) **Branch protection** em `main` exigindo o check de testes antes do merge.
 
 ---
 

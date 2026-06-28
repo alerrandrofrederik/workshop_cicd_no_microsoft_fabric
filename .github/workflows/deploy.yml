@@ -1,0 +1,70 @@
+name: Deploy to Microsoft Fabric
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'Workshop_DMF/src/**'
+  workflow_dispatch:
+    inputs:
+      deployMode:
+        description: 'Deploy mode'
+        type: choice
+        default: selective
+        options:
+          - selective
+          - specific
+          - full
+      diffDepth:
+        description: 'Depth (HEAD~N) — used only in selective mode'
+        type: string
+        default: '1'
+      itemsToDeploy:
+        description: "Items to deploy (comma-separated, used only in 'specific' mode)"
+        type: string
+        default: ''
+
+# Avoid concurrent deploys to the same environment
+concurrency:
+  group: deploy-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: windows-latest
+    # Maps the branch to a GitHub Environment ('main' or 'develop').
+    # Approval gate for production is configured on the 'main' Environment.
+    environment: ${{ github.ref_name }}
+    defaults:
+      run:
+        working-directory: Workshop_DMF
+    env:
+      PYTHONUTF8: '1'
+      PYTHONIOENCODING: 'utf-8'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Full history is required for the HEAD~N diff used in selective mode
+          fetch-depth: 0
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install dependencies
+        run: pip install pyfabricops python-dotenv
+
+      - name: Run Deploy
+        run: python -X utf8 scripts/deploy.py
+        env:
+          DEPLOY_MODE: ${{ inputs.deployMode || 'selective' }}
+          DIFF_DEPTH: ${{ inputs.diffDepth || '1' }}
+          ITEMS_TO_DEPLOY: ${{ inputs.itemsToDeploy || '' }}
+          FAB_TENANT_ID: ${{ secrets.FAB_TENANT_ID }}
+          FAB_CLIENT_ID: ${{ secrets.FAB_CLIENT_ID }}
+          FAB_CLIENT_SECRET: ${{ secrets.FAB_CLIENT_SECRET }}

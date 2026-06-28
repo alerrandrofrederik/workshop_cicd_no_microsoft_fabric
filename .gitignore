@@ -1,0 +1,16 @@
+# Variáveis de ambiente locais
+.env
+*.env
+
+# Cache do Power BI Desktop
+*.pbix
+**/.pbi/
+
+# Arquivos de sistema
+.DS_Store
+Thumbs.db
+
+# Python / dependências locais
+__pycache__/
+*.pyc
+.venv/
