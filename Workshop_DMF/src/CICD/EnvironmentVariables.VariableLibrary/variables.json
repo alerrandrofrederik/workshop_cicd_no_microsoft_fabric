@@ -1,0 +1,161 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/variableLibrary/definition/variables/1.0.0/schema.json",
+  "variables": [
+    {
+      "name": "workspace_name",
+      "note": "",
+      "type": "String",
+      "value": "Workshop_DMF-DEV"
+    },
+    {
+      "name": "workspace_id",
+      "note": "",
+      "type": "String",
+      "value": "fde1670c-0b60-4fab-9a34-544986eb8788"
+    },
+    {
+      "name": "lakehouse_bronze",
+      "note": "",
+      "type": "ItemReference",
+      "value": {
+        "itemId": "84d4c516-90ee-4963-a892-2f1da3090e13",
+        "workspaceId": "fde1670c-0b60-4fab-9a34-544986eb8788"
+      }
+    },
+    {
+      "name": "lakehouse_silver",
+      "note": "",
+      "type": "ItemReference",
+      "value": {
+        "itemId": "6fa320a8-96a3-438b-aba6-98093b3669e9",
+        "workspaceId": "fde1670c-0b60-4fab-9a34-544986eb8788"
+      }
+    },
+    {
+      "name": "lakehouse_gold",
+      "note": "",
+      "type": "ItemReference",
+      "value": {
+        "itemId": "bdf8983d-cdb5-4ff1-ae1f-655460db8890",
+        "workspaceId": "fde1670c-0b60-4fab-9a34-544986eb8788"
+      }
+    },
+    {
+      "name": "connection",
+      "note": "",
+      "type": "String",
+      "value": "03112c5e-549e-4e0e-9e80-1443247bb8a2"
+    },
+    {
+      "name": "nb_load_bronze",
+      "note": "",
+      "type": "ItemReference",
+      "value": {
+        "itemId": "cec4fab0-577a-4ebb-b5d9-7ba2ed959251",
+        "workspaceId": "fde1670c-0b60-4fab-9a34-544986eb8788"
+      }
+    },
+    {
+      "name": "nb_techinical_validation",
+      "note": "",
+      "type": "ItemReference",
+      "value": {
+        "itemId": "63062c26-7060-4173-94ff-09fdfafd084c",
+        "workspaceId": "fde1670c-0b60-4fab-9a34-544986eb8788"
+      }
+    },
+    {
+      "name": "nb_clean_data",
+      "note": "",
+      "type": "ItemReference",
+      "value": {
+        "itemId": "b8df2fa9-4923-4b27-a018-ef5db55611c1",
+        "workspaceId": "fde1670c-0b60-4fab-9a34-544986eb8788"
+      }
+    },
+    {
+      "name": "nb_historize_data_scd2",
+      "note": "",
+      "type": "ItemReference",
+      "value": {
+        "itemId": "feb23a6e-674a-4fcc-a8cf-52cc8a2bfb74",
+        "workspaceId": "fde1670c-0b60-4fab-9a34-544986eb8788"
+      }
+    },
+    {
+      "name": "nb_create_gold_tables",
+      "note": "",
+      "type": "ItemReference",
+      "value": {
+        "itemId": "515bf9b2-2c09-4919-a6e5-96ca448e8256",
+        "workspaceId": "fde1670c-0b60-4fab-9a34-544986eb8788"
+      }
+    },
+    {
+      "name": "nb_dimension_date",
+      "note": "",
+      "type": "ItemReference",
+      "value": {
+        "itemId": "bf5bb233-d2b5-4012-9df7-483b3ff70694",
+        "workspaceId": "fde1670c-0b60-4fab-9a34-544986eb8788"
+      }
+    },
+    {
+      "name": "nb_dimension_product",
+      "note": "",
+      "type": "ItemReference",
+      "value": {
+        "itemId": "fd435ed3-26bc-4a68-a9b4-6ce7a889f18a",
+        "workspaceId": "fde1670c-0b60-4fab-9a34-544986eb8788"
+      }
+    },
+    {
+      "name": "nb_dimension_customer",
+      "note": "",
+      "type": "ItemReference",
+      "value": {
+        "itemId": "da7e240d-cf99-480b-91cd-8a7828041abe",
+        "workspaceId": "fde1670c-0b60-4fab-9a34-544986eb8788"
+      }
+    },
+    {
+      "name": "nb_dimension_address",
+      "note": "",
+      "type": "ItemReference",
+      "value": {
+        "itemId": "9d596ce6-f679-48fc-8800-b2725a231161",
+        "workspaceId": "fde1670c-0b60-4fab-9a34-544986eb8788"
+      }
+    },
+    {
+      "name": "nb_fact_sales",
+      "note": "",
+      "type": "ItemReference",
+      "value": {
+        "itemId": "f6e97967-a7b5-497a-9cbf-717c5d4648d4",
+        "workspaceId": "fde1670c-0b60-4fab-9a34-544986eb8788"
+      }
+    },
+    {
+      "name": "nb_dimension_date2",
+      "note": "",
+      "type": "ItemReference",
+      "value": {
+        "itemId": "bf5bb233-d2b5-4012-9df7-483b3ff70694",
+        "workspaceId": "fde1670c-0b60-4fab-9a34-544986eb8788"
+      }
+    },
+    {
+      "name": "connection_id",
+      "note": "",
+      "type": "String",
+      "value": "03112c5e-549e-4e0e-9e80-1443247bb8a2"
+    },
+    {
+      "name": "lakehouse_bronze_id",
+      "note": "",
+      "type": "String",
+      "value": "84d4c516-90ee-4963-a892-2f1da3090e13"
+    }
+  ]
+}

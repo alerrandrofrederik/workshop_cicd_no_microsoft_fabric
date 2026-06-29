@@ -27,7 +27,7 @@
             "schema": [],
             "typeProperties": {},
             "externalReferences": {
-              "connection": "@pipeline().libraryVariables.EnvironmentVariables_connection.connectionId"
+              "connection": "@pipeline().libraryVariables.EnvironmentVariables_connection"
             }
           }
         }
@@ -82,7 +82,7 @@
                       }
                     },
                     "externalReferences": {
-                      "connection": "@pipeline().libraryVariables.EnvironmentVariables_connection.connectionId"
+                      "connection": "@pipeline().libraryVariables.EnvironmentVariables_connection"
                     }
                   }
                 },
@@ -224,7 +224,7 @@
                   "schema": [],
                   "typeProperties": {},
                   "externalReferences": {
-                    "connection": "@pipeline().libraryVariables.EnvironmentVariables_connection.connectionId"
+                    "connection": "@pipeline().libraryVariables.EnvironmentVariables_connection"
                   }
                 }
               }
@@ -582,7 +582,7 @@
         "libraryName": "EnvironmentVariables"
       },
       "EnvironmentVariables_connection": {
-        "type": "Object",
+        "type": "String",
         "variableName": "connection",
         "libraryName": "EnvironmentVariables"
       },
